@@ -1,0 +1,21 @@
+<?php
+include 'FctCommunes.php';
+	if(isset($_GET['nom_fic']))
+	{
+		$nom_fic=$_GET['nom_fic'];
+		$donnees=file_get_contents('php://input');
+		try
+		{
+//Tracer("EcrireFic".$sql);
+			$ab=new AccesBd();
+			$ab->Init();
+Tracer("EcrireFic".$nom_fic);
+			$ab->EcrireFic($nom_fic,'php://input');
+			print "OK";
+		}
+		catch(Exception $e)
+		{
+			TracerErreur("Erreur: Ecrirefic($nom_fic):".$e->getMessage()."\r\n\r".$e->getTraceAsString());
+		}
+	}
+?>

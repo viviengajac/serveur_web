@@ -1,0 +1,1 @@
+Get-Content d:/pg_visual_studio/www/AccesBdPm/gestion_pm_20210224.sql | ./mysql --user=root gestion_pm_bis

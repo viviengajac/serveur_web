@@ -1,0 +1,4 @@
+ouverture fenetre de commande en administrateur
+cd '\program files (x86)'
+cd openssl-win32\bin
+./openssl.exe req -new -nodes -keyout cle_bg.key -out csr_bg.csr

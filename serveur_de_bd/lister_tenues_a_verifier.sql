@@ -1,0 +1,1 @@
+SELECT fct_rep('loge_tenue',id_loge_tenue),fct_rep('cerem',id_cerem) FROM `loge_tenue` WHERE id_loge_tenue not in (select id_loge_tenue from prs_trv) and id_cerem in (select id_cerem from cerem where nom_cerem='Initiation')

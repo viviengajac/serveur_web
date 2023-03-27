@@ -1,0 +1,6 @@
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `AZcmptSelect`()
+begin
+	select '' as etat,id_cmpt,nom_cmpt,id_instr from cmpt order by nom_cmpt;
+end$$
+DELIMITER ;
