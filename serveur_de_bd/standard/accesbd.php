@@ -181,7 +181,7 @@ function EcrireEnsembleDeTable()
 						$type_col_int=2;
 						break;
 					default:
-						print "AAAA= type_col_inconnu:".$type_col;
+						print "type_col_inconnu:".$type_col;
 						break;
 				}
                 WriteValue($type_col_int);
@@ -249,12 +249,6 @@ function EcrireEnsembleDeTable()
 									$val_col=substr($val_col,0,4).substr($val_col,5,2).substr($val_col,8,2);
 									WriteValue($val_col);
 								}
-								/*
-								elseif(strlen($val_col)>10) {
-									$val_col=substr($val_col,0,4).substr($val_col,5,2).substr($val_col,8,2).substr($val_col,11,2).substr($val_col,14,2).substr($val_col,17,2);
-									WriteValue($val_col);
-								}
-								*/
 								else
 								{
 									print "\"";

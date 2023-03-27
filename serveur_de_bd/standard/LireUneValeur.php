@@ -14,7 +14,8 @@ include 'FctCommunes.php';
 		}
 		catch(Exception $e)
 		{
-			TracerErreur("Erreur: LireUneValeur($sql):".$e->getMessage()."\r\n\r".$e->getTraceAsString());
+//			TracerErreur("Erreur: LireUneValeur($sql):".$e->getMessage()."\r\n\r".$e->getTraceAsString());
+			TracerErreur("Erreur: ".$e->getMessage()."§sql=($sql)§§pile=(".$e->getTraceAsString().")");
 		}
 	}
 ?>

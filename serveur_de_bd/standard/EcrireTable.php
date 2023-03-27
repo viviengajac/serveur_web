@@ -14,10 +14,9 @@ include 'FctCommunes.php';
 //Tracer("donnees=".$donnees);
 		*/
 		$sql_et_donnees=$_GET['sql'];
-		$test_contenu=$_GET['contenu'];
-Tracer("DDD EcrireTable.php: sql_et_donnees=_GET['sql']='$sql_et_donnees' ; contenu='$test_contenu'");
+//Tracer("EcrireTable: sql_et_donnnees=$sql_et_donnees");
 		$pos1=strpos($sql_et_donnees,"§");
-//Tracer("DDD2 EcrireTable: pos1=$pos1");
+//Tracer("EcrireTable: pos1=$pos1");
 		if($pos1>0)
 		{
 //Tracer("cas 1");
@@ -29,11 +28,9 @@ Tracer("DDD EcrireTable.php: sql_et_donnees=_GET['sql']='$sql_et_donnees' ; cont
 		{
 //Tracer("cas 2");
 			$sql=$sql_et_donnees;
-Tracer("DD2 EcrireTable.php: sql=sql_et_donnees; sql='$sql'");
 			$donnees=file_get_contents('php://input');
-Tracer("DD3 EcrireTable.php: donnees=file_get_contents('php://input'); donnees='$donnees'");
 		}
-Tracer("EEE EcrireTable.php: sql='$sql', donnees='$donnees'");
+//Tracer("EcrireTable: sql=($sql), donnees=($donnees)");
 		try
 		{
 			/*
@@ -52,13 +49,12 @@ Tracer("EEE EcrireTable.php: sql='$sql', donnees='$donnees'");
 			*/
 			$ab=new AccesBd();
 			$ab->Init();
-			Tracer("FFF= EcrireTable.php avant ab->EcrireUneTable(sql,donnees): sql='$sql', donnees='$donnees'");
 			$ab->EcrireUneTable($sql,$donnees);
 			print "OK";
 		}
 		catch(Exception $e)
 		{
-			TracerErreur("Erreur: EcrireUneTable: sql=($sql), donnees=($donnees):".$e->getMessage()."\r\n\r".$e->getTraceAsString());
+			TracerErreur("Erreur: ".$e->getMessage()."§sql=($sql)§donnees=($donnees)§pile=(".$e->getTraceAsString().")");
 //			print "Erreur: LireUneTable($sql):".$e->getMessage();
 		}
 	}

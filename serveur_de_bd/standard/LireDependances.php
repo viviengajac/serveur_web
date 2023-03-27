@@ -54,7 +54,8 @@ include 'FctCommunes.php';
 		}
 		catch(Exception $e)
 		{
-			TracerErreur("Erreur: EcrireUneTable: sql=($sql), donnees=($donnees):".$e->getMessage()."\r\n\r".$e->getTraceAsString());
+//			TracerErreur("Erreur: EcrireUneTable: sql=($sql), donnees=($donnees):".$e->getMessage()."\r\n\r".$e->getTraceAsString());
+			TracerErreur("Erreur: ".$e->getMessage()."§sql=($sql)§donnees=($donnees)§pile=(".$e->getTraceAsString().")");
 //			print "Erreur: LireUneTable($sql):".$e->getMessage();
 		}
 	}

@@ -13,7 +13,8 @@ include 'FctCommunes.php';
 		}
 		catch(Exception $e)
 		{
-			TracerErreur("Erreur: EcrireBlob($sql):".$e->getMessage()."\r\n\r".$e->getTraceAsString());
+//			TracerErreur("Erreur: EcrireBlob($sql):".$e->getMessage()."\r\n\r".$e->getTraceAsString());
+			TracerErreur("Erreur: ".$e->getMessage()."§sql=($sql)§§pile=(".$e->getTraceAsString().")");
 		}
 	}
 ?>

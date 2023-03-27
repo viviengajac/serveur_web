@@ -13,7 +13,7 @@ include 'FctCommunes.php';
 			$nom_table=$tab_params[1];
 			$id_doc=$tab_params[2];
 			$type_fic=$tab_params[3];
-			$ab->LireBlob($db_ou_fs,$nom_table,$id_doc,$type_fic);
+			$ab->LireTailleBlob($db_ou_fs,$nom_table,$id_doc,$type_fic);
 		}
 		catch(Exception $e)
 		{

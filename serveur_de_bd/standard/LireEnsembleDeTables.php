@@ -13,7 +13,7 @@ include 'FctCommunes.php';
 //print "sql=($sql)";
 		try
 		{
-Tracer("AAA LireEnsembleDeTables($sql)");
+//Tracer("LireEnsembleDeTables($sql)");
 //print "sql=$sql\n";
 //			LireUneTable("ODBC13",$sql);
 //			LireUneTable("MSSQL",$sql);
@@ -37,13 +37,14 @@ Tracer("AAA LireEnsembleDeTables($sql)");
 			$ab=new AccesBd();
 //Tracer("LireEnsembleDeTables: 1");
 			$ab->Init();
-//Tracer("LireEnsembleDeTables: 2");
+//Tracer("LireEnsembleDeTables: appel de LireUneTable($sql)");
 			$ab->LireUneTable($sql);
 //Tracer("LireEnsembleDeTables: 3");
 		}
 		catch(Exception $e)
 		{
-			TracerErreur("Erreur: LireUneTable($sql):".$e->getMessage()."\r\n\r".$e->getTraceAsString());
+//			TracerErreur("Erreur: LireUneTable($sql):".$e->getMessage()."\r\n\r".$e->getTraceAsString());
+			TracerErreur("Erreur: ".$e->getMessage()."§§sql=($sql)§pile=(".$e->getTraceAsString().")");
 //			print "Erreur: LireUneTable($sql):".$e->getMessage();
 		}
 	}

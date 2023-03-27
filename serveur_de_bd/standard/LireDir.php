@@ -1,11 +1,11 @@
 <?php
-//Tracer("BBB");
+include 'FctCommunes.php';
 	if(isset($_GET['nom_dir']))
 	{
 		$nom_dir=$_GET['nom_dir'];
 		try
 		{
-//Tracer("BBB LireDir".$nom_dir);
+//Tracer("LireDir".$nom_dir);
 			if (is_dir($nom_dir))
 			{
 				if ($dh = opendir($nom_dir))
@@ -34,10 +34,15 @@
 					echo "]";
 				}
 			}
+			else
+			{
+				throw new ErrorException("Répertoire inconnu: $nom_dir");
+			}
 		}
 		catch(Exception $e)
 		{
-			TracerErreur("Erreur: LireDir($nom_dir):".$e->getMessage()."\r\n\r".$e->getTraceAsString());
+//			TracerErreur("Erreur: LireDir($nom_dir):".$e->getMessage()."\r\n\r".$e->getTraceAsString());
+			TracerErreur("Erreur: ".$e->getMessage()."§nom_dir=($nom_dir)§§pile=(".$e->getTraceAsString().")");
 		}
 	}
 ?>

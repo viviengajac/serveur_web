@@ -9,11 +9,8 @@ include 'FctCommunes.php';
 			$ab=new AccesBd();
 			$ab->Init();
 			$tab_params=preg_split('/\|/',$params);
-			$db_ou_fs=$tab_params[0];
-			$nom_table=$tab_params[1];
-			$id_doc=$tab_params[2];
-			$type_fic=$tab_params[3];
-			$ab->LireBlob($db_ou_fs,$nom_table,$id_doc,$type_fic);
+			$nom_fic=$tab_params[0];
+			$ab->LireTailleFic($nom_fic);
 		}
 		catch(Exception $e)
 		{

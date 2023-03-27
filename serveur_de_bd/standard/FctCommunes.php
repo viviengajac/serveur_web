@@ -6,14 +6,14 @@
 	}
 	function Tracer($msg)
 	{
-		$monfichier=fopen('c:\\temperr\\accesbd.err','a+');
+		$monfichier=fopen('d:\\temp\\accesbd.err','a+');
 		fputs($monfichier,date("Ymd:H:i:s")."\t".$msg."\n");
 		fclose($monfichier);
 //		print $msg."<br>";
 	}
 	function TracerErreur($msg)
 	{
-		$monfichier=fopen('c:\\temperr\\accesbd.err','a+');
+		$monfichier=fopen('d:\\temp\\accesbd.err','a+');
 		fputs($monfichier,date("Ymd:H:i:s")."\t".$msg."\n");
 		fclose($monfichier);
 		print $msg."<br>";
@@ -31,6 +31,49 @@
 			return true;
 		}
 		return (substr($haystack, -$length) === $needle);
+	}
+	function myErrorHandler($errno, $errstr, $errfile, $errline)
+	{
+		if (!(error_reporting() & $errno))
+		{
+			// Ce code d'erreur n'est pas inclus dans error_reporting(), donc il continue
+			// jusqu'au gestionaire d'erreur standard de PHP
+			return false;
+		}
+		// $errstr doit peut être être échappé :
+		$errstr = htmlspecialchars($errstr);
+		switch ($errno)
+		{
+		case E_ERROR:
+		case E_USER_ERROR:
+			/*
+			echo "<b>Mon ERREUR</b> [$errno] $errstr<br />\n";
+			echo "  Erreur fatale sur la ligne $errline dans le fichier $errfile";
+			echo ", PHP " . PHP_VERSION . " (" . PHP_OS . ")<br />\n";
+			echo "Arrêt...<br />\n";
+			*/
+			$msg="Erreur [$errno]: $errstr\nligne $errline dans $errfile";
+			TracerErreur($msg);
+			break;
+//			exit(1);
+		case E_WARNING:
+		case E_USER_WARNING:
+//			echo "<b>Mon ALERTE</b> [$errno] $errstr<br />\n";
+			$msg="Erreur légère [$errno]: $errstr\nligne $errline dans $errfile";
+			TracerErreur($msg);
+			break;
+		case E_NOTICE:
+		case E_USER_NOTICE:
+			echo "<b>Mon AVERTISSEMENT</b> [$errno] $errstr<br />\n";
+//			return false;
+			break;
+		default:
+			echo "Type d'erreur inconnu : [$errno] $errstr<br />\n";
+//			return false;
+			break;
+		}
+		/* Ne pas exécuter le gestionnaire interne de PHP */
+		return true;
 	}
 	class Cellule
 	{
@@ -229,6 +272,7 @@
 						case -7:
 							$type_col_int=4;
 							break;
+						case "date":
 						case "datetime":
 						case 93:
 							$type_col_int=3;
@@ -250,13 +294,9 @@
 							$type_col_int=2;
 							break;
 						case "float":
+						case "newdecimal":
 							$type_col_int=5;
 							break;
-						/*
-							case "datetime":
-							$type_col_int=6;
-							break;
-						*/
 						default:
 							print "type_col_inconnu:".$type_col;
 							break;
@@ -292,7 +332,7 @@
 				$this->WritePropertyByName("l","%nb_lig%");
 //				$this->WriteValue($nb_lig);
 				$this->WriteStartArray();
-//Tracer("nb_lig=($nb_lig)");
+//Tracer("TranscrireEnJSonUneTable: nb_lig=($nb_lig)");
 				$fini=0;
 				$num_lig=0;
 				while ($fini==0)
@@ -348,6 +388,7 @@
 						$nb_cel=0;
 //						$this->WriteStartArray();
 						$debut=1;
+//Tracer("nb cols=($nb_col)");
 						for($j=0;$j<$nb_col;$j++)
 						{
 							switch($this->m_type_cnx)
@@ -361,6 +402,7 @@
 									$type_col=$col_meta['native_type'];
 									if(startsWith($nom_col,"id_") && !endsWith($nom_col,"WITH"))
 										$type_col="int";
+//Tracer("col($j)=($val_col_string); type_col=($type_col)"); 
 									break;
 								case "ODBC13":
 									$val_col=$row[$j];
@@ -370,18 +412,11 @@
 								case "MSSQL":
 									$val_col=$row[$metadata[$j]["Name"]];
 									$type_col=$metadata[$j]["Type"];
-Tracer("j=".$j.", metadata=".$metadata[$j].", val_col=".$val_col.", type_col=".$type_col);
+//Tracer("j=".$j.", metadata=".$metadata[$j].", val_col=".$val_col.", type_col=".$type_col);
 									if($val_col!=null)
 									{
-										if($type_col==93) {
-											/*
-											if(strlen($val_col)>10) {
-												$val_col_string=$val_col->format('YmdHis');
-											}
-											else
-											*/								
-											$val_col_string=$val_col->format('Ymd');											
-										}											
+										if($type_col==93)
+											$val_col_string=$val_col->format('Ymd');
 										else
 											$val_col_string=$val_col;
 									}
@@ -430,32 +465,47 @@ Tracer("j=".$j.", metadata=".$metadata[$j].", val_col=".$val_col.", type_col=".$
 									case 4:
 									case "long":
 									case "longlong":
+									case "float":
+									case "newdecimal":
 //T(")valeur de colonne(");
 //										$this->WriteValue($val_col);
 //										$this->WritePropertyByNumber($j,$val_col);
 										$tab_cel.=$j.":".$val_col;
 										$nb_cel++;
 										break;
+									case "date":
 									case "datetime":
 									case 93:
 										$suffixe1=" 00:00:00.000";
 										$suffixe2=" 00:00:00";
+//Tracer("valeur date:($val_col_string)");
 										if(endswith($val_col_string,$suffixe1) || endswith($val_col_string,$suffixe2))
 										{
 //									$val_col=substr($val_col,0,strlen($val_col)-strlen($suffixe));
 											$val_col=substr($val_col,0,4).substr($val_col,5,2).substr($val_col,8,2);
-//T(")valeur de colonne(");
+//Tracer("cas 1: val_col=($val_col)");
 //											$this->WriteValue($val_col);
 //											$this->WritePropertyByNumber($j,$val_col);
 											$tab_cel.=$j.":".$val_col;
 											$nb_cel++;
 										}
-										//cas date et heure non nulle						
-										elseif(strlen($val_col)>10) {
+										elseif(strlen($val_col)>10)	//cas date et heure non nulle
+										{
 											$val_col=substr($val_col,0,4).substr($val_col,5,2).substr($val_col,8,2).substr($val_col,11,2).substr($val_col,14,2).substr($val_col,17,2);
+//Tracer("cas 2: val_col=($val_col)");
 											$tab_cel.=$j.":".$val_col;
 											$nb_cel++;
-										}																			
+										}
+										elseif(strlen($val_col)==10 && substr($val_col,4,1)=="-" && substr($val_col,7,1)=="-")
+										{
+//									$val_col=substr($val_col,0,strlen($val_col)-strlen($suffixe));
+											$val_col=substr($val_col,0,4).substr($val_col,5,2).substr($val_col,8,2);
+//Tracer("cas 1: val_col=($val_col)");
+//											$this->WriteValue($val_col);
+//											$this->WritePropertyByNumber($j,$val_col);
+											$tab_cel.=$j.":".$val_col;
+											$nb_cel++;
+										}
 										else
 										{
 //											print "\"";
@@ -463,6 +513,7 @@ Tracer("j=".$j.", metadata=".$metadata[$j].", val_col=".$val_col.", type_col=".$
 //											$this->WriteValue($val_col_string);
 											$this->WritePropertyByNumber($j,$val_col_string);
 											$tab_cel.="\"".$j.":".$val_col_string."\"";
+//Tracer("cas 3: val_col=($val_col_string)");
 											$nb_cel++;
 //											print "\"";
 										}
@@ -482,19 +533,8 @@ Tracer("j=".$j.", metadata=".$metadata[$j].", val_col=".$val_col.", type_col=".$
 										$nb_cel++;
 //										print "\"";
 										break;
-									case "float":
-										$tab_cel.=$j.":".$val_col;
-										$nb_cel++;
-										break;
-									/*
-									case "datetime":
-										$this->WritePropertyByNumber($j,$val_col_string);
-										$tab_cel.="\"".$j.":".$val_col_string."\"";
-										$nb_cel++;
-										break;
-									*/
 									default:
-										print "BBBB= type inconnu:".$type_col;
+										print "type inconnu:".$type_col;
 										break;
 								}
 //T(")fin objet valeur de colonne(");
@@ -530,10 +570,11 @@ Tracer("j=".$j.", metadata=".$metadata[$j].", val_col=".$val_col.", type_col=".$
 			$this->WriteEndArray();
 //T(")fin objet liste des tables(");
 			$this->WriteEndObject();
-//Tracer("tampon_sortie=(".$this->m_tampon_sortie.")");
+//Tracer("tampon_sortie avant remplacement du nb de lignes=(".$this->m_tampon_sortie.")");
 			$sortie=str_replace("%nb_lig%",$num_lig,$this->m_tampon_sortie);
+//Tracer("tampon_sortie après remplacement du nb de lignes=(".$this->m_tampon_sortie.")");
 //Tracer("avant affichage sortie");
-Tracer("ZZZ sortie=(".$sortie.")");
+//Tracer("sortie=(".$sortie.")");
 			print $sortie;
 		}
 		private $tabd;
@@ -618,7 +659,7 @@ Tracer("ZZZ sortie=(".$sortie.")");
 			$this->tabd=str_split($donnees);
 			$this->ind=0;
 			$c=$this->tabd[$this->ind];
-//Tracer("HHH c=".$c);
+//			Tracer("c=".$c);
 			if($this->tabd[$this->ind]!=$this->m_start_object)
 				throw new Exception($this->MessageException("DecoderTableJSon: Pas de caractère de début"));
 			$this->ind++;
@@ -773,7 +814,7 @@ Tracer("ZZZ sortie=(".$sortie.")");
 									$this->ind++;
 //Tracer("Avant LireEntier: ind=".$this->ind);
 									$num_col=$this->LireEntier();
-//Tracer("Apres LireEntier: ind=".$this->ind.", num_col=".$num_col);
+//Tracer("Apres LireEntier: lecture d'une cellule: ind=".$this->ind.", num_col=".$num_col);
 									if($this->tabd[$this->ind]!=":")
 										throw new Exception($this->MessageException("DecoderTableJSon: Pas de séparateur entre numéro de colonne et valeur"));
 									$this->ind++;
@@ -907,7 +948,7 @@ Tracer("ZZZ sortie=(".$sortie.")");
 		}
 		function TransformerSqlPourMySql($sql)
 		{
-Tracer("III FctCommunes.php Debut de fonction TransformerSqlPourMysl(sql); sql='$sql'");
+//Tracer("Debut de TransformerSqlPourMysl($sql)");
 //			if(startsWith($sql,"exec "))
 			$needle="exec ";
 			if(substr(strtolower($sql), 0, strlen($needle)) == $needle)
@@ -921,7 +962,7 @@ Tracer("III FctCommunes.php Debut de fonction TransformerSqlPourMysl(sql); sql='
 					$nom_fonction=substr($params,0,$pos);
 					$liste_params=substr($params,1+$pos);
 					$sql="call ".$nom_fonction."(".$liste_params.")";
-Tracer("JJJ FctCommunes.php Fin de fonction TransformerSqlPourMysl(sql); sql='$sql'");
+//T("sql=(".$sql.")");
 				}
 				else
 				{
@@ -1066,120 +1107,110 @@ Tracer("JJJ FctCommunes.php Fin de fonction TransformerSqlPourMysl(sql); sql='$s
 		}
 		function LireUneTable($sql)
 		{
-Tracer("BBB FctCommunes-LireUneTable;sql=($sql)");
-//Tracer("BBB LireUneTable: type_bd_sql=".$this->m_type_bd_sql);
-			/* print $sql; */
+//Tracer("LireUneTable: type_bd_sql=".$this->m_type_bd_sql);
 			if(startsWith($this->m_type_bd_sql,"mysql"))
 			{
 //Tracer("avant TransformerSqlPourMySql");
 				$sql=$this->TransformerSqlPourMySql($sql);
-Tracer("CCC apres TransformerSqlPourMySql: sql=(".$sql.")");
+//Tracer("apres TransformerSqlPourMySql: sql=(".$sql.")");
 			}
-			try
-			{
 //Tracer("type_cnx=".$this->m_type_cnx.", sql=".$sql);
 //Tracer("LireUneTable: 1: bd=".$this->m_bd.", sql=".$sql);
-				switch($this->m_type_cnx)
-				{
-					case "PDO":
+			switch($this->m_type_cnx)
+			{
+				case "PDO":
 //						$cnx_info=array("UID"=>$this->m_uid,"PWD"=>$this->m_pwd,"Database"=>$this->m_bd);
 //Tracer("LireUneTable: 2");
 //						$cnx=new PDO("$this->m_type_bd_sql:host=$this->m_srv;dbname=$this->m_bd;charset=utf8",$this->m_uid,$this->m_pwd); //,array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
-						$cnx=new PDO($this->m_cnxstr,$this->m_uid,$this->m_pwd);
-						if($cnx)
-						{
-Tracer("DDD LireUneTable: 3");
-							$cnx->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
+					$cnx=new PDO($this->m_cnxstr,$this->m_uid,$this->m_pwd);
+					if($cnx)
+					{
+//Tracer("LireUneTable: 3");
+						$cnx->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
 //Tracer("LireUneTable: 4: sql=".$sql);
-							$results=$cnx->query($sql);
-Tracer("EEE LireUneTable: 5");
-							if($results === false)
+						$results=$cnx->query($sql);
+//Tracer("LireUneTable: 5");
+						if($results === false)
+						{
+							$msg="Erreur d'exécution du SQL pour sql=(".$sql.")";
+							TracerErreur($msg);
+							$errs=$cnx->errorinfo();
+							foreach($errs as $err)
 							{
-								$msg="Erreur d'exécution du SQL pour sql=(".$sql.")";
+								$msg=$err['message']."/".$err['code'];
 								TracerErreur($msg);
-								$errs=$cnx->errorinfo();
-								foreach($errs as $err)
-								{
-									$msg=$err['message']."/".$err['code'];
-									TracerErreur($msg);
-								}
-							}
-							else
-							{
-// trace incorrecte:Error: Object of class PDOStatement could not be converted to string ;
-//Tracer("KKKK results=($results)");
-								//while($ligne = $results->fetch()) {
-								//	Tracer("AAA ligne=" . $ligne);
-								//}
-								Tracer("FFF");
-								$aj=new AccesJSon($this->m_type_cnx);
-								$aj->TranscrireEnJsonUneTable($results);
-//Tracer("GGG pdo.LireUneTable: 6=".$aj->m_tampon_sortie."");
 							}
 						}
 						else
 						{
-							$msg="Erreur de connexion au serveur SQL";
-							TracerErreur($msg);
+							$aj=new AccesJSon($this->m_type_cnx);
+							$aj->TranscrireEnJsonUneTable($results);
+//Tracer("pdo.LireUneTable: 6");
 						}
-						break;
-					case "ODBC10":
-						$cnx = odbc_connect("Driver={SQL Server Native Client 10.0};Server=$srv;Database=$bd;", $uid, $pwd);
-						break;
-					case "ODBC13":
-						$cnx = odbc_connect("Driver={ODBC Driver 13 for SQL Server};Server=$this->m_srv;Database=$this->m_bd;", $this->m_uid, $this->m_pwd, SQL_CUR_USE_ODBC);
-						$results = odbc_prepare($cnx,$sql);
+					}
+					else
+					{
+						$msg="Erreur de connexion au serveur SQL";
+						TracerErreur($msg);
+					}
+					break;
+				case "ODBC10":
+					$cnx = odbc_connect("Driver={SQL Server Native Client 10.0};Server=$srv;Database=$bd;", $uid, $pwd);
+					break;
+				case "ODBC13":
+					$cnx = odbc_connect("Driver={ODBC Driver 13 for SQL Server};Server=$this->m_srv;Database=$this->m_bd;", $this->m_uid, $this->m_pwd, SQL_CUR_USE_ODBC);
+					$results = odbc_prepare($cnx,$sql);
 //						odbc_setoption($result, 6, SQL_CUR_USE_ODBC, 0)
 //echo "appel de odbc_execute($results)<br/>";
-						odbc_execute($results);	//  or die($this->DbErreur("sql_query",$sql));
-						$aj=new AccesJSon($this->m_type_cnx);
-						$aj->TranscrireEnJsonUneTable($results);
-						odbc_free_result($results);
-						odbc_close($cnx);
-						break;
-					case "MSSQL":
+					odbc_execute($results);	//  or die($this->DbErreur("sql_query",$sql));
+					$aj=new AccesJSon($this->m_type_cnx);
+					$aj->TranscrireEnJsonUneTable($results);
+					odbc_free_result($results);
+					odbc_close($cnx);
+					break;
+				case "MSSQL":
 //Tracer("LireUneTable: MSSQL: sql=($sql)");
-						sqlsrv_configure("WarningsReturnAsErrors", 0);
-						$connectionInfo = array( "Database"=>$this->m_bd, "UID"=>$this->m_uid, "PWD"=>$this->m_pwd);
+					sqlsrv_configure("WarningsReturnAsErrors", 0);
+					$connectionInfo = array( "Database"=>$this->m_bd, "UID"=>$this->m_uid, "PWD"=>$this->m_pwd);
 //Tracer("LireUneTable: srv=".$this->m_srv.", bd=".$this->m_bd.", uid=".$this->m_uid.", pwd=".$this->m_pwd);
-						$cnx = sqlsrv_connect($this->m_srv, $connectionInfo);
-						if($cnx)
-						{
-							$params = array();
+					$cnx = sqlsrv_connect($this->m_srv, $connectionInfo);
+					if($cnx)
+					{
+						$params = array();
 //							$options =  array( "Scrollable" => SQLSRV_CURSOR_KEYSET );
-							$options =  array( "Scrollable" => SQLSRV_CURSOR_STATIC );
-							$results = sqlsrv_query($cnx,$sql,$params,$options);
+						$options =  array( "Scrollable" => SQLSRV_CURSOR_STATIC );
+						$results = sqlsrv_query($cnx,$sql,$params,$options);
 //Tracer("LireUneTableMSSQL(".$sql.")");
 //							$results = sqlsrv_query($cnx,$sql);
 //							$results = sqlsrv_prepare($cnx,$sql,$params,$options);
-							if($results === false)
+						if($results === false)
+						{
+							$msg="Erreur d'exécution du SQL pour sql=(".$sql.")";
+							TracerErreur($msg);
+							$errs=sqlsrv_errors();
+							foreach($errs as $err)
 							{
-								$msg="Erreur d'exécution du SQL pour sql=(".$sql.")";
+								$msg=$err['message']."/".$err['code'];
 								TracerErreur($msg);
-								$errs=sqlsrv_errors();
-								foreach($errs as $err)
-								{
-									$msg=$err['message']."/".$err['code'];
-									TracerErreur($msg);
-								}
-							}
-							else
-							{
-//							sqlsrv_execute($results);
-//Tracer("appel de transcrireenjson");
-								$aj=new AccesJSon($this->m_type_cnx);
-								$aj->TranscrireEnJsonUneTable($results);
-								sqlsrv_free_stmt($results);
 							}
 						}
 						else
 						{
-							$msg="Erreur de connexion au serveur SQL";
-							TracerErreur($msg);
+//							sqlsrv_execute($results);
+//Tracer("appel de transcrireenjson");
+							$aj=new AccesJSon($this->m_type_cnx);
+							$aj->TranscrireEnJsonUneTable($results);
+							sqlsrv_free_stmt($results);
 						}
-						break;
-				}
+					}
+					else
+					{
+						$msg="Erreur de connexion au serveur SQL";
+						TracerErreur($msg);
+					}
+					break;
 			}
+			/*
 			catch (Exception $e)
 			{
 				$msg="Erreur LireUneTable($sql):".$e->getMessage();
@@ -1191,6 +1222,7 @@ Tracer("EEE LireUneTable: 5");
 					break;
 				}
 			}
+			*/
 		}
 		function PreparerUneValeur($sql)
 		{
@@ -1309,7 +1341,7 @@ Tracer("EEE LireUneTable: 5");
 			$ret="";
 			if(startsWith($this->m_type_bd_sql,"mysql"))
 				$sql=$this->TransformerSqlPourMySql($sql);
-Tracer("XXX apres transfo pour mysql: sql=($sql)");
+//Tracer("apres transfo pour mysql: sql=($sql)");
 //			try
 //			{
 				switch($this->m_type_cnx)
@@ -1372,10 +1404,10 @@ Tracer("XXX apres transfo pour mysql: sql=($sql)");
 		{
 //			try
 //			{
-Tracer("GGG FctCommunes.php Debut de fonction EcrireUneTable(sql,donnees): sql='$sql' ;donnees='$donnees'");
+//Tracer("Debut de EcrireTable: sql=($sql)");
 				$pos_params=strpos($sql,"@");
 				$sql_sans_params=substr($sql,0,$pos_params);
-Tracer("VVV Debut de EcrireTable: sql=($sql), pos_params=($pos_params), sql_sans_params=($sql_sans_params)");
+//Tracer("Debut de EcrireTable: sql=($sql), pos_params=($pos_params), sql_sans_params=($sql_sans_params)");
 				$aj=new AccesJSon($this->m_type_cnx);
 				$aj->DecoderTableJSon($donnees);
 				$nb_col=$aj->DonnerNbCol();
@@ -1393,7 +1425,7 @@ Tracer("VVV Debut de EcrireTable: sql=($sql), pos_params=($pos_params), sql_sans
 				$lignes=$aj->DonnerTabLig();
 				for($i=0;$i<$nb_lig;$i++)
 				{
-//Tracer("ligne[$i]");
+//Tracer("EcrireUneTable: ligne[$i]");
 					$sql_final=$sql_sans_params;
 					$sql_traite=$sql;
 					$une_ligne=$lignes[$i];
@@ -1417,7 +1449,7 @@ Tracer("VVV Debut de EcrireTable: sql=($sql), pos_params=($pos_params), sql_sans
 								switch($type_col)
 								{
 									case 1:
-										// numerique
+										// entier
 										$val_col_format=$val_col;
 										break;
 									case 2;
@@ -1426,23 +1458,30 @@ Tracer("VVV Debut de EcrireTable: sql=($sql), pos_params=($pos_params), sql_sans
 										break;
 									case 3:
 										// date
-										if(strlen($val_col)==0) {											
-											break;
-										}
-										elseif(strlen($val_col)>10) {
+										if(strlen($val_col)>10)
+										{
 											$val_col_format="'".substr($val_col,0,4).'-'.substr($val_col,4,2).'-'.substr($val_col,6,2).' '.substr($val_col,8,2).':'.substr($val_col,10,2).':'.substr($val_col,12,2)."'";
-											break;
 										}
-										else {
+										else if (strlen($val_col)==8)
+										{
 											$val_col_format="'".substr($val_col,0,4).'-'.substr($val_col,4,2).'-'.substr($val_col,6,2)."'";
-											break;
 										}
+										else if (strlen($val_col)==0)
+										{
+											$val_col_format="null";
+										}
+										else
+										{
+											throw new Exception($this->MessageException("Date invalide (".$val_col.")"));
+										}
+//Tracer("val_col_format=($val_col_format)");
+										break;
 									case 4:
 										// bit
 										$val_col_format=$val_col;
 										break;
 									case 5:
-										//float
+										// flottant
 										$val_col_format=$val_col;
 										break;
 									default:
@@ -1460,13 +1499,13 @@ Tracer("VVV Debut de EcrireTable: sql=($sql), pos_params=($pos_params), sql_sans
 							$sql_final.="null";
 							$val_sql="null";
 						}
-Tracer("111 col[$j]=($val_sql/$tab_nom_col[$j])/$tab_type_col[$j]");
+//Tracer("col[$j]=($val_sql/$tab_nom_col[$j])/$tab_type_col[$j]");
 						$sql_traite=str_replace("@".$nom_col."@",$val_sql,$sql_traite);
-Tracer("222 sql_traite=($sql_traite)");
+//Tracer("sql_traite=($sql_traite)");
 					}
-//Tracer("HHH FctCommunes.php avant PreparerExecSql(sql_traite); sql_traite='$sql_traite'");
+//Tracer("avant exec ($sql_traite)");
 					$this->PreparerExecSql($sql_traite);
-//Tracer("KKK apres exec ($sql_traite)");
+//Tracer("apres exec ($sql_traite)");
 				}
 //Tracer("fin");
 //			}
@@ -1694,102 +1733,104 @@ Tracer("EcrireFic: type_cnx=".$this->m_type_cnx);
 		}
 		function EcrireBlobDb($nom_table,$id_doc,$id_type_fic,$nom_fic)
 		{
-			$nom_col_id="id_".$nom_table;
-			$sql="update ".$nom_table." set id_type_fic=".$id_type_fic." where ".$nom_col_id."=".$id_doc;
-			$ret=$this->preparerExecSql($sql);
-			switch($this->m_type_cnx)
+			try
 			{
-				case "ODBC13":
+				$nom_col_id="id_".$nom_table;
+				$sql="update ".$nom_table." set id_type_fic=".$id_type_fic." where ".$nom_col_id."=".$id_doc;
+				$ret=$this->preparerExecSql($sql);
+				switch($this->m_type_cnx)
+				{
+					case "ODBC13":
 				/*
-					$cnx = odbc_connect("Driver={ODBC Driver 13 for SQL Server};Server=$this->m_srv;Database=$this->m_bd;", $this->m_uid, $this->m_pwd);
-					$results = odbc_prepare($cnx,$sql);
-					@odbc_execute($results) or die($this->DbErreur("sql_query",$sql));
-					$nb_cols=odbc_num_fields($results);
-					if($nb_cols==1)
-					{
-						odbc_fetch_into($results,$row);
-						$val_col=$row[0];
-						print $val_col;
-					}
-					odbc_free_result($results);
-					odbc_close($cnx);
+						$cnx = odbc_connect("Driver={ODBC Driver 13 for SQL Server};Server=$this->m_srv;Database=$this->m_bd;", $this->m_uid, $this->m_pwd);
+						$results = odbc_prepare($cnx,$sql);
+						@odbc_execute($results) or die($this->DbErreur("sql_query",$sql));
+						$nb_cols=odbc_num_fields($results);
+						if($nb_cols==1)
+						{
+							odbc_fetch_into($results,$row);
+							$val_col=$row[0];
+							print $val_col;
+						}
+						odbc_free_result($results);
+						odbc_close($cnx);
 				*/
-					break;
-				case "MSSQL":
+						break;
+					case "MSSQL":
 				/*
-					$connectionInfo = array( "Database"=>$this->m_bd, "UID"=>$this->m_uid, "PWD"=>$this->m_pwd);
-					$cnx = sqlsrv_connect($this->m_srv, $connectionInfo);
-					// Call a simple query
-					$params = array();
-					$options =  array( "Scrollable" => SQLSRV_CURSOR_KEYSET );
-					$results = sqlsrv_query($cnx,$sql,$params,$options);
-//					$nb_col=sqlsrv_num_fields($results);
-//					$nb_lig=sqlsrv_num_rows($results);
-//					$metadata=sqlsrv_field_metadata($results);
-					$row=sqlsrv_fetch_array($results,SQLSRV_FETCH_ASSOC);
-					$val_col=$row['doc'];
-					print base64_encode($val_col);
-					sqlsrv_free_stmt($results);
-					sqlsrv_close($cnx);
+						$connectionInfo = array( "Database"=>$this->m_bd, "UID"=>$this->m_uid, "PWD"=>$this->m_pwd);
+						$cnx = sqlsrv_connect($this->m_srv, $connectionInfo);
+						// Call a simple query
+						$params = array();
+						$options =  array( "Scrollable" => SQLSRV_CURSOR_KEYSET );
+						$results = sqlsrv_query($cnx,$sql,$params,$options);
+//						$nb_col=sqlsrv_num_fields($results);
+//						$nb_lig=sqlsrv_num_rows($results);
+//						$metadata=sqlsrv_field_metadata($results);
+						$row=sqlsrv_fetch_array($results,SQLSRV_FETCH_ASSOC);
+						$val_col=$row['doc'];
+						print base64_encode($val_col);
+						sqlsrv_free_stmt($results);
+						sqlsrv_close($cnx);
 				*/
-					break;
-				case "PDO":
+						break;
+					case "PDO":
 				/*
 //Tracer("EcrireUnFichier: 1: bd=".$this->m_bd);
-					mb_internal_encoding( 'UTF-8' );
-					$cnx_info=array("UID"=>$this->m_uid,"PWD"=>$this->m_pwd,"Database"=>$this->m_bd);
+						mb_internal_encoding( 'UTF-8' );
+						$cnx_info=array("UID"=>$this->m_uid,"PWD"=>$this->m_pwd,"Database"=>$this->m_bd);
 //Tracer("EcrireUnFichier: 2");
-					$cnx=new PDO("$this->m_type_bd_sql:host=$this->m_srv;dbname=$this->m_bd;charset=utf8",new PDO$this->m_uid,$this->m_pwd); //,array(PDO::ATTR_ERRMODE => DO::ERRMODE_EXCEPTION,PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
-					$cnx->exec('set names utf8');
-//Tracer("EcrireUnFichier: 3");
-					$cnx->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
-					$doc=file_get_contents($nom_fic);
-//Tracer("contenu du blob=[[[".$doc."]]]");
-//Tracer(file_get_contents($nom_fic));
-//Tracer("après file_get_contents");
-//Tracer("EcrireUnFichier: 4: sql=".$sql);
-//					$sql_bis=str_replace("@doc","file_get_contents('$nom_fic')",$sql);
-					$sql_bis=str_replace("@doc",":doc",$sql);
-//Tracer("EcrireUnFichier: avant execsql");
-//					$params[]=['doc'=>file_get_contents($nom_fic)];
-//Tracer("EcrireBlob: contenu=".file_get_contents($nom_fic));
-					$params[]=['doc'=>base64_decode(file_get_contents($nom_fic))];
-//					$stmt=$cnx->prepare($sql_bis);
-//					$stmt->execute($params);
-					foreach ($params as $param)
-					{
-						$stmt = $cnx->prepare($sql_bis);
-						$stmt->execute($param);
-					}
-*/
-					$cnx=new PDO($this->m_cnxstr,$this->m_uid,$this->m_pwd);
-					if($cnx)
-					{
+						$cnx=new PDO("$this->m_type_bd_sql:host=$this->m_srv;dbname=$this->m_bd;charset=utf8",$this->m_uid,$this->m_pwd); //,array(PDO::ATTR_ERRMODE => DO::ERRMODE_EXCEPTION,PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
 						$cnx->exec('set names utf8');
-//Tracer("Exec Sql PDO: 3");
+//Tracer("EcrireUnFichier: 3");
 						$cnx->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
-//Tracer("Exec Sql PDO: 4: ".$sql);
-//						$doc=file_get_contents($nom_fic);
+						$doc=file_get_contents($nom_fic);
 //Tracer("contenu du blob=[[[".$doc."]]]");
 //Tracer(file_get_contents($nom_fic));
 //Tracer("après file_get_contents");
 //Tracer("EcrireUnFichier: 4: sql=".$sql);
-//					$sql_bis=str_replace("@doc","file_get_contents('$nom_fic')",$sql);
+//						$sql_bis=str_replace("@doc","file_get_contents('$nom_fic')",$sql);
+						$sql_bis=str_replace("@doc",":doc",$sql);
+//Tracer("EcrireUnFichier: avant execsql");
+	//					$params[]=['doc'=>file_get_contents($nom_fic)];
+//Tracer("EcrireBlob: contenu=".file_get_contents($nom_fic));
+						$params[]=['doc'=>base64_decode(file_get_contents($nom_fic))];
+//						$stmt=$cnx->prepare($sql_bis);
+//						$stmt->execute($params);
+						foreach ($params as $param)
+						{
+							$stmt = $cnx->prepare($sql_bis);
+							$stmt->execute($param);
+						}
+*/
+						$cnx=new PDO($this->m_cnxstr,$this->m_uid,$this->m_pwd);
+						if($cnx)
+						{
+							$cnx->exec('set names utf8');
+//Tracer("Exec Sql PDO: 3");
+							$cnx->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
+//Tracer("Exec Sql PDO: 4: ".$sql);
+//							$doc=file_get_contents($nom_fic);
+//Tracer("contenu du blob=[[[".$doc."]]]");
+//Tracer(file_get_contents($nom_fic));
+//Tracer("après file_get_contents");
+//Tracer("EcrireUnFichier: 4: sql=".$sql);
+//						$sql_bis=str_replace("@doc","file_get_contents('$nom_fic')",$sql);
 //						$sql_bis=str_replace("@doc","convert(varbinary,:doc)",$sql);
 //Tracer('type de bd='.$this->m_type_bd_sql);
-						$nom_col_id="id_".$nom_table;
-						$sql="update ".$nom_table." set doc_db=@doc_db where ".$nom_col_id."=".$id_doc;
-						if($this->m_type_bd_sql=="mssql")
-						{
-							$sql_bis=str_replace("@doc_db","convert(varbinary(MAX),:doc_db)",$sql);
-//							$contenu=file_get_contents($nom_fic);
-							$contenu=base64_decode(file_get_contents($nom_fic));
-						}
-						else
-						{
-							$sql_bis=str_replace("@doc_db",":doc_db",$sql);
-							$contenu=base64_decode(file_get_contents($nom_fic));
-						}
+							$nom_col_id="id_".$nom_table;
+							$sql="update ".$nom_table." set doc_db=@doc_db where ".$nom_col_id."=".$id_doc;
+							if($this->m_type_bd_sql=="mssql")
+							{
+								$sql_bis=str_replace("@doc_db","convert(varbinary(MAX),:doc_db)",$sql);
+//								$contenu=file_get_contents($nom_fic);
+								$contenu=base64_decode(file_get_contents($nom_fic));
+							}
+							else
+							{
+								$sql_bis=str_replace("@doc_db",":doc_db",$sql);
+								$contenu=base64_decode(file_get_contents($nom_fic));
+							}
 //Tracer("EcrireUnFichier: avant execsql");
 //					$params[]=['doc'=>file_get_contents($nom_fic)];
 //Tracer("EcrireBlob: contenu=".file_get_contents($nom_fic));
@@ -1804,48 +1845,89 @@ $encoding = mb_detect_encoding($contenu);
 Tracer("EcrireBlob: encoding apres decodage=(".$encoding.")");
 $contenu = mb_convert_encoding($contenu, 'UTF-8', $encoding);
 */
-						$params[]=['doc_db'=>$contenu];
+							$params[]=['doc_db'=>$contenu];
 //Tracer("EcrireBlob: sql=".$sql_bis);
 //Tracer("EcrireBlob: contenu=".$contenu);
-						foreach ($params as $param)
-						{
-//Tracer("EcrireBlob: boucle 1");
-							$stmt = $cnx->prepare($sql_bis);
-//Tracer("EcrireBlob: boucle 2");
-							if($this->m_type_bd_sql=="mssql")
+							foreach ($params as $param)
 							{
-								$stmt->setAttribute(PDO::SQLSRV_ATTR_ENCODING, PDO::SQLSRV_ENCODING_SYSTEM);
-							}
-							$stmt->execute($param);
+//Tracer("EcrireBlob: boucle 1");
+								$stmt = $cnx->prepare($sql_bis);
+//Tracer("EcrireBlob: boucle 2");
+								if($this->m_type_bd_sql=="mssql")
+								{
+									$stmt->setAttribute(PDO::SQLSRV_ATTR_ENCODING, PDO::SQLSRV_ENCODING_SYSTEM);
+								}
+								$stmt->execute($param);
 //Tracer("EcrireBlob: boucle 3");
-						}
+							}
 //Tracer("EcrireUnFichier: 13");
 //Tracer("Exec Sql PDO: 5");
-					}
-					else
-					{
-						$msg="Erreur de connexion au serveur SQL";
-						TracerErreur($msg);
-					}
-					break;
+						}
+						else
+						{
+							$msg="Erreur de connexion au serveur SQL";
+							TracerErreur($msg);
+						}
+						break;
+				}
+			}
+			catch (Exception $e)
+			{
+				$msg="Erreur EcrireBlobDb:".$e->getMessage();
+				print $msg;
+				TracerErreur($msg);
 			}
 		}
 		function EcrireBlobFs($nom_table,$id_doc,$type_fic,$id_type_fic,$nom_fic)
 		{
-			$contenu=file_get_contents($nom_fic);
-			$lg_blob=strlen($contenu);
-//Tracer("EcrireBlobFs: lg_blob=".$lg_blob);
-			$sql="update ".$nom_table." set doc_fs=".$lg_blob.",id_type_fic=".$id_type_fic." where id_".$nom_table."=".$id_doc;
-			$this->PreparerExecSql($sql);
-			$contenu_binaire=base64_decode($contenu);
-			$nom_fic=$this->NomFicBlob($nom_table,$id_doc,$type_fic);
+			$nom_fic_complet=$this->NomFicBlob($nom_table,$id_doc,$type_fic);
+			/*
+			if(file_exists($nom_fic_complet))
+			{
+				$msg="Erreur EcrireBlobFs: le fichier ".$nom_fic_complet." existe déjà";
+				print $msg;
+				TracerErreur($msg);
+			}
+			else
+			{
+			*/
+				try
+				{
+					$contenu=file_get_contents($nom_fic);
+					$contenu_binaire=base64_decode($contenu);
 //Tracer("EcrireFic($nom_fic,$contenu)");
-//Tracer("EcrireFic: type_cnx=".$this->m_type_cnx);
-			$fichier=fopen($nom_fic,'w');
-			fputs($fichier,$contenu_binaire);
-			fclose($fichier);
+//Tracer("EcrireBlobFs: nom_fic=".$nom_fic_complet);
+					set_error_handler("myErrorHandler");
+					if($fichier=fopen($nom_fic_complet,'w'))
+					{
+//Tracer("EcrireBlobFs: nom_fic_complet=".$nom_fic_complet);
+						fputs($fichier,$contenu_binaire);
+//Tracer("EcrireBlobFs: nom_fic2=".$nom_fic);
+						fclose($fichier);
+//Tracer("EcrireBlobFs: nom_fic3=".$nom_fic);
+						restore_error_handler();
+						$lg_blob=strlen($contenu);
+//Tracer("EcrireBlobFs: lg_blob=".$lg_blob);
+						$sql="update ".$nom_table." set doc_fs=".$lg_blob.",id_type_fic=".$id_type_fic." where id_".$nom_table."=".$id_doc;
+						$this->PreparerExecSql($sql);
+						print "OK";
+					}
+					else
+					{
+						restore_error_handler();
+						$msg="Erreur EcrireBlobFs: le fichier ".$nom_fic_complet." existe déjà";
+						TracerErreur($msg);
+					}
+				}
+				catch (Exception $e)
+				{
+//Tracer("EcrireBlobFs: erreur: nom_fic=".$nom_fic);
+					$msg="Erreur EcrireBlobFs:".$e->getMessage();
+					print $msg;
+					TracerErreur($msg);
+				}
+//			}
 		}
-
 		function EcrireBlob($db_ou_fs,$nom_table,$id_doc,$type_fic,$nom_fic)
 		{
 //Tracer("EcrireBlob($db_ou_fs,$nom_table,$id_doc,$type_fic)");
@@ -1959,25 +2041,58 @@ $contenu = mb_convert_encoding($contenu, 'UTF-8', $encoding);
 		}
 		function LireFic($nom_fic)
 		{
-//Tracer("LireBlobFs($nom_fic)");
+//Tracer("LireFic($nom_fic)");
 			$fichier=fopen($nom_fic,'r');
 			$contenu=fread($fichier,filesize($nom_fic));
 			fclose($fichier);
 			print base64_encode($contenu);
 		}
-		function LireFicPartiel($nom_fic,$octet_debut,$taille)
+		function LireTailleFic($nom_fic)
 		{
+//Tracer("LireTaillefic($nom_fic)");
+			$taille=filesize($nom_fic);
+//Tracer("LireTaillefic($nom_fic): taille=".$taille);
+			print $taille;
+		}
+		function LirePartielFic($nom_fic,$octet_debut,$taille)
+		{
+//Tracer("LirePartielFic($nom_fic)");
+			$fichier=fopen($nom_fic,'r');
+			$contenu=fread($fichier,filesize($nom_fic));
+			fclose($fichier);
+			$contenu_partiel=substr($contenu,$octet_debut,$taille);
+			$contenu_code=base64_encode($contenu_partiel);
+			print ($contenu_code);
+//			print (substr($contenu_code,$octet_debut,$taille));
+		}
+		function LireTailleBlobFs($nom_table,$id_doc,$type_fic)
+		{
+			$nom_fic=$this->NomFicBlob($nom_table,$id_doc,$type_fic);
+			$this->LireTailleFic($nom_fic);
+			/*
 //Tracer("LireBlobFs($nom_fic)");
 			$fichier=fopen($nom_fic,'r');
 			$contenu=fread($fichier,filesize($nom_fic));
 			fclose($fichier);
-			$contenu_code=base64_encode($contenu);
-			print (substr($contenu_code,$octet_debut,$taille));
+			print base64_encode($contenu);
+			*/
 		}
 		function LireBlobFs($nom_table,$id_doc,$type_fic)
 		{
 			$nom_fic=$this->NomFicBlob($nom_table,$id_doc,$type_fic);
 			$this->LireFic($nom_fic);
+			/*
+//Tracer("LireBlobFs($nom_fic)");
+			$fichier=fopen($nom_fic,'r');
+			$contenu=fread($fichier,filesize($nom_fic));
+			fclose($fichier);
+			print base64_encode($contenu);
+			*/
+		}
+		function LirePartielBlobFs($nom_table,$id_doc,$type_fic,$octet_debut,$taille_bloc)
+		{
+			$nom_fic=$this->NomFicBlob($nom_table,$id_doc,$type_fic);
+			$this->LirePartielFic($nom_fic,$octet_debut,$taille_bloc);
 			/*
 //Tracer("LireBlobFs($nom_fic)");
 			$fichier=fopen($nom_fic,'r');
@@ -1993,6 +2108,22 @@ $contenu = mb_convert_encoding($contenu, 'UTF-8', $encoding);
 				$this->LireblobDb($nom_table,$id_doc);
 			else
 				$this->LireBlobFs($nom_table,$id_doc,$type_fic);
+		}
+		function LirePartielBlob($db_ou_fs,$nom_table,$id_doc,$type_fic,$octet_debut,$taille_bloc)
+		{
+//Tracer("LireBlob");
+			if($db_ou_fs=="db")
+				$this->LirePartielBlobDb($nom_table,$id_doc,$octet_debut,$taille_bloc);
+			else
+				$this->LirePartielBlobFs($nom_table,$id_doc,$type_fic,$octet_debut,$taille_bloc);
+		}
+		function LireTailleBlob($db_ou_fs,$nom_table,$id_doc,$type_fic)
+		{
+//Tracer("LireBlob");
+			if($db_ou_fs=="db")
+				$this->LireTailleBlobDb($nom_table,$id_doc);
+			else
+				$this->LireTailleBlobFs($nom_table,$id_doc,$type_fic);
 		}
 	}
 ?>
