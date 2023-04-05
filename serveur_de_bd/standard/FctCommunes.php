@@ -6,14 +6,28 @@
 	}
 	function Tracer($msg)
 	{
-		$monfichier=fopen('d:\\temp\\accesbd.err','a+');
+		$mondossier="c:\\temp";
+		if (!file_exists($mondossier)) {
+			mkdir("c:\\temp");
+			$monfichier=fopen('c:\\temp\\accesbd.err','a+');
+		}
+		else {			
+			$monfichier=fopen('c:\\temp\\accesbd.err','a+');
+		}
 		fputs($monfichier,date("Ymd:H:i:s")."\t".$msg."\n");
 		fclose($monfichier);
 //		print $msg."<br>";
 	}
 	function TracerErreur($msg)
 	{
-		$monfichier=fopen('d:\\temp\\accesbd.err','a+');
+		$mondossier="c:\\temp";
+		if (!file_exists($mondossier)) {
+			mkdir("c:\\temp");
+			$monfichier=fopen('c:\\temp\\accesbd.err','a+');
+		}
+		else {			
+			$monfichier=fopen('c:\\temp\\accesbd.err','a+');
+		}
 		fputs($monfichier,date("Ymd:H:i:s")."\t".$msg."\n");
 		fclose($monfichier);
 		print $msg."<br>";
